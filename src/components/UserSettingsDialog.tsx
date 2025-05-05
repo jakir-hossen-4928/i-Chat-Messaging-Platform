@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/components/theme-provider";
@@ -159,7 +158,7 @@ const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogProps) => 
         updatedAt: Date.now(),
       });
 
-      // Update theme if necessary
+      // Update theme if necessaryV
       if (selectedTheme !== theme && (theme !== "system" || selectedTheme !== "light")) {
         setTheme(selectedTheme);
       }
@@ -193,21 +192,23 @@ const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogProps) => 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] max-w-[400px] sm:max-w-md p-4 sm:p-6">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-lg p-4 sm:p-6 mx-auto">
         <DialogHeader>
-          <DialogTitle>Profile Settings</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg sm /
+
+System: :text-xl">Profile Settings</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             Update your profile information, photo, and preferences.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 sm:gap-6 py-4">
+        <div className="flex flex-col gap-4 py-4">
           {/* Profile Picture */}
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
-              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-white shadow-lg">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-white shadow-md">
                 <AvatarImage src={imagePreview || undefined} />
-                <AvatarFallback className="bg-indigo-600 text-white text-lg sm:text-xl">
+                <AvatarFallback className="bg-indigo-600 text-white text-base sm:text-lg">
                   {displayName?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
@@ -215,21 +216,21 @@ const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogProps) => 
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-white shadow-md hover:bg-gray-100"
+                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-white shadow-md hover:bg-gray-100"
                   onClick={triggerFileInput}
                   aria-label="Upload new profile picture"
                 >
-                  <Upload className="h-4 w-4" />
+                  <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
                 {uploadedImage && (
                   <Button
                     size="icon"
                     variant="destructive"
-                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full"
+                    className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
                     onClick={clearImagePreview}
                     aria-label="Remove new profile picture"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 )}
               </div>
@@ -241,54 +242,54 @@ const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogProps) => 
                 onChange={handleImageChange}
               />
             </div>
-            <p className="text-xs sm:text-sm text-gray-500">Upload a new profile picture</p>
+            <p className="text-xs text-gray-500">Upload a new profile picture</p>
           </div>
 
           {/* Form Fields */}
-          <div className="grid gap-3 sm:gap-4">
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="name" className="text-sm sm:text-base">Name</Label>
+          <div className="grid gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="name" className="text-sm">Name</Label>
               <Input
                 id="name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name"
                 maxLength={50}
-                className="text-sm sm:text-base"
+                className="text-sm"
                 aria-describedby="name-error"
               />
               {displayName.length > 50 && (
-                <p id="name-error" className="text-xs sm:text-sm text-red-500">
+                <p id="name-error" className="text-xs text-red-500">
                   Name must be 50 characters or less
                 </p>
               )}
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="bio" className="text-sm sm:text-base">Bio</Label>
+            <div className="space-y-1">
+              <Label htmlFor="bio" className="text-sm">Bio</Label>
               <Textarea
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Tell us about yourself"
-                className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base"
+                className="min-h-[80px] text-sm"
                 maxLength={200}
                 aria-describedby="bio-error"
               />
               {bio.length > 200 && (
-                <p id="bio-error" className="text-xs sm:text-sm text-red-500">
+                <p id="bio-error" className="text-xs text-red-500">
                   Bio must be 200 characters or less
                 </p>
               )}
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="theme" className="text-sm sm:text-base">Theme Preference</Label>
+            <div className="space-y-1">
+              <Label htmlFor="theme" className="text-sm">Theme Preference</Label>
               <Select
                 value={selectedTheme}
                 onValueChange={(value: "light" | "dark") => setSelectedTheme(value)}
               >
-                <SelectTrigger id="theme" className="text-sm sm:text-base" aria-label="Select theme preference">
+                <SelectTrigger id="theme" className="text-sm" aria-label="Select theme preference">
                   <SelectValue placeholder="Select theme" />
                 </SelectTrigger>
                 <SelectContent>
@@ -308,11 +309,11 @@ const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogProps) => 
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-0">
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto text-sm"
             aria-label="Cancel profile changes"
           >
             Cancel
@@ -320,7 +321,7 @@ const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogProps) => 
           <Button
             onClick={handleSave}
             disabled={isSaveDisabled}
-            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
             aria-label="Save profile changes"
           >
             {(loading || uploading) ? (
