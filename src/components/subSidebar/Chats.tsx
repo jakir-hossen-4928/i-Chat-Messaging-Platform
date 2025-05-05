@@ -250,8 +250,8 @@ const Chats: React.FC<ChatsProps> = ({ searchTerm, onChatSelect }) => {
                     {chat.type === "group"
                       ? chat.groupName
                       : userProfiles[
-                          chat.users.find((id) => id !== currentUser?.uid) || ""
-                        ]?.displayName || "User"}
+                        chat.users.find((id) => id !== currentUser?.uid) || ""
+                      ]?.displayName || "User"}
                   </h3>
                   <span className="text-xs text-gray-500">
                     {chat.lastMessage
@@ -262,8 +262,8 @@ const Chats: React.FC<ChatsProps> = ({ searchTerm, onChatSelect }) => {
                 {chat.lastMessage && (
                   <div className="flex items-center space-x-2">
                     {chat.lastMessage.attachments &&
-                    chat.lastMessage.attachments.length > 0 &&
-                    chat.lastMessage.attachments[0].type.startsWith("image") ? (
+                      chat.lastMessage.attachments.length > 0 &&
+                      chat.lastMessage.attachments[0].type.startsWith("image") ? (
                       <>
                         <img
                           src={chat.lastMessage.attachments[0].url}
@@ -278,26 +278,26 @@ const Chats: React.FC<ChatsProps> = ({ searchTerm, onChatSelect }) => {
                         </span>
                       </>
                     ) : (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                        {chat.lastMessage.text || (
-                          <>
-                            <img width="16" height="16" src="https://img.icons8.com/fluency/48/image--v1.png" alt="image" className="inline" />
-                            <p className="inline">Image sent</p>
-                          </>
-                        )}
-                        {chat.lastMessage.text.length > 20
-                          ? `${chat.lastMessage.text.slice(0, 20)}...`
-                          : chat.lastMessage.text}
-                        {chat.lastMessage.senderId !== currentUser?.uid && (
-                          <span className="text-xs text-gray-500">
-                            {" "}
-                            - {userProfiles[chat.lastMessage.senderId]?.displayName}
-                          </span>
-                        )}
-                        </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                        {chat.lastMessage.text
+                          ? `${chat.lastMessage.text.slice(0, 6)}${chat.lastMessage.text.length > 6 ? '...' : ''}`
+                          : (
+                            <>
+                              <img
+                                width="16"
+                                height="16"
+                                src="https://img.icons8.com/fluency/48/image--v1.png"
+                                alt="image"
+                                className="inline"
+                              />
+                              <span className="inline">Image sent</span>
+                            </>
+                          )}
+                      </p>
                     )}
                   </div>
                 )}
+
               </div>
             </div>
           </div>

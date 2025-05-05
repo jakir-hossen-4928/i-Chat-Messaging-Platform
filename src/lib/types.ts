@@ -81,6 +81,14 @@ export interface Message {
   }[];
 }
 
+export interface CallState {
+  callId: string;
+  type: "audio" | "video";
+  callerId: string;
+  receiverId: string;
+  status: "initiating" | "ringing" | "active" | "ended";
+}
+
 // ChatAction type for chat context reducer actions
 export type ChatAction =
   | { type: "SET_CURRENT_CHAT"; payload: Chat | null }
@@ -90,4 +98,3 @@ export type ChatAction =
   | { type: "DELETE_MESSAGE"; payload: string }
   | { type: "SET_TYPING_STATUS"; payload: { chatId: string; isTyping: boolean } }
   | { type: "SET_CHATS"; payload: Chat[] };
-

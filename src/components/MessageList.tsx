@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Check, CheckCheck, Download, Clock } from "lucide-react";
 import { firestore } from "@/lib/firebase.index";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Message } from "@/lib/types";
@@ -15,51 +15,46 @@ import MessageActions from "./MessageActions";
 import { Button } from "./ui/button";
 import { useOptimizedMessages } from "@/hooks/use-optimized-messages";
 import { Skeleton } from "@/components/ui/skeleton";
-import "../styles/chat-themes.css";
 
 interface MessageListProps {
   chatId: string | null;
 }
 
-const MessageList = ({ chatId }: MessageListProps) => {
+const MessageList: React.FC<MessageListProps> = ({ chatId }) => {
   const { currentUser } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userProfiles, setUserProfiles] = useState<Record<string, { displayName: string, photoURL: string }>>({});
   const isMobile = useMediaQuery("(max-width: 640px)");
   const containerRef = useRef<HTMLDivElement>(null);
   const { messages, loading, hasMore, loadMore } = useOptimizedMessages(chatId, 20);
-  console.log("Messages:", messages); // Debug log
 
   useGSAP(() => {
-    // Only run animation if messages exist and elements are in the DOM
     if (containerRef.current) {
       const messageElements = containerRef.current.querySelectorAll('.message-appear');
       if (messages.length > 0 && messageElements.length > 0) {
-        // Animation for new messages
         gsap.fromTo(
-          messageElements, 
-          { opacity: 0, y: 10 }, 
-          { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: "power2.out" }
+          messageElements,
+          { opacity: 0, y: 10 },
+          { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: "power3.out" }
         );
       }
     }
-  }, [messages, containerRef.current]);
+  }, [messages]);
 
-  // Fetch users for the messages
   useEffect(() => {
     if (!messages.length) return;
-    
+
     const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId))];
-    
+
     uniqueSenderIds.forEach(async senderId => {
       try {
         const userQuery = query(collection(firestore, "users"), where("uid", "==", senderId));
         const snapshot = await getDocs(userQuery);
-        
+
         if (!snapshot.empty) {
           const userData = snapshot.docs[0].data();
           setUserProfiles(prev => ({
-            ...prev, 
+            ...prev,
             [senderId]: {
               displayName: userData.displayName || "User",
               photoURL: userData.photoURL || ""
@@ -86,8 +81,7 @@ const MessageList = ({ chatId }: MessageListProps) => {
         toast.error("Invalid attachment");
         return;
       }
-      
-      // Download as blob instead of opening in a new tab
+
       fetch(attachment.url)
         .then(response => response.blob())
         .then(blob => {
@@ -111,10 +105,9 @@ const MessageList = ({ chatId }: MessageListProps) => {
     }
   };
 
-  // Group messages by date for better organization
   const groupMessagesByDate = (messages: Message[]) => {
     const groups: { [key: string]: Message[] } = {};
-    
+
     messages.forEach(message => {
       const date = format(new Date(message.timestamp), "yyyy-MM-dd");
       if (!groups[date]) {
@@ -122,38 +115,34 @@ const MessageList = ({ chatId }: MessageListProps) => {
       }
       groups[date].push(message);
     });
-    
+
     return groups;
   };
-  
-  // Format message date headers in Bangladesh time
+
   const formatMessageDate = (timestamp: number) => {
-    // Format date in Bangladesh timezone
     const date = new Date(timestamp);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
-    // Convert to Bangladesh time for comparison
+
     const bdTime = new Date(timestamp).toLocaleString('en-US', {
       timeZone: 'Asia/Dhaka',
     });
     const bdDate = new Date(bdTime);
-    
+
     const bdToday = new Date().toLocaleString('en-US', {
       timeZone: 'Asia/Dhaka',
     });
     const bdTodayDate = new Date(bdToday);
-    
+
     const bdYesterday = new Date(bdTodayDate);
     bdYesterday.setDate(bdTodayDate.getDate() - 1);
-    
+
     if (bdDate.toDateString() === bdTodayDate.toDateString()) {
       return "Today";
     } else if (bdDate.toDateString() === bdYesterday.toDateString()) {
       return "Yesterday";
     } else {
-      // Format the date in Bangladesh timezone
       return new Date(timestamp).toLocaleString('en-US', {
         timeZone: 'Asia/Dhaka',
         weekday: 'long',
@@ -163,12 +152,10 @@ const MessageList = ({ chatId }: MessageListProps) => {
     }
   };
 
-  // Optimized image loading handler with lazy loading
   const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
     event.currentTarget.classList.remove('opacity-0');
   };
 
-  // Format timestamp in Bangladesh time (12 hour format)
   const formatTimestamp = (timestamp: number) => {
     try {
       return new Date(timestamp).toLocaleString('en-US', {
@@ -182,7 +169,7 @@ const MessageList = ({ chatId }: MessageListProps) => {
       return "Invalid time";
     }
   };
-  
+
   const messageGroups = groupMessagesByDate(messages);
 
   if (loading && messages.length === 0) {
@@ -208,7 +195,6 @@ const MessageList = ({ chatId }: MessageListProps) => {
 
   return (
     <div className="space-y-6 pb-6" ref={containerRef}>
-      {/* Load More Button */}
       {hasMore && (
         <div className="flex justify-center py-2">
           <Button variant="outline" size="sm" onClick={loadMore} className="text-xs">
@@ -216,8 +202,7 @@ const MessageList = ({ chatId }: MessageListProps) => {
           </Button>
         </div>
       )}
-      
-      {/* Messages By Date Groups */}
+
       {Object.entries(messageGroups).map(([date, dateMessages]) => (
         <div key={date} className="space-y-4">
           <div className="flex justify-center">
@@ -225,21 +210,18 @@ const MessageList = ({ chatId }: MessageListProps) => {
               {formatMessageDate(dateMessages[0].timestamp)}
             </div>
           </div>
-          
+
           {dateMessages.map((message) => {
             const isSender = message.senderId === currentUser?.uid;
             const showAvatar = !isSender && message.senderId !== dateMessages[dateMessages.indexOf(message) - 1]?.senderId;
-            // Debug the message status
-            console.log(`Message ${message.id} status:`, message.status, "edited:", message.edited || message.isEdited);
-            
+
             return (
-              <div key={message.id} className="message-appear opacity-100">
+              <div key={message.id} className="message-appear">
                 <div className={cn(
-                  "message-container",
+                  "message-container flex",
                   isSender ? "justify-end" : "justify-start",
                   isSender ? "sender-message" : "receiver-message"
                 )}>
-                  {/* Avatar (for receiver messages only) */}
                   {!isSender && (
                     <div className="message-avatar">
                       {showAvatar ? (
@@ -254,21 +236,19 @@ const MessageList = ({ chatId }: MessageListProps) => {
                       )}
                     </div>
                   )}
-                  
-                  {/* Message Content */}
-                  <div 
+
+                  <div
                     className={cn(
-                      "message-content-wrapper group", // Added 'group' class here directly
+                      "message-content-wrapper group",
                       isSender ? "items-end" : "items-start"
                     )}
                   >
-                    {/* Message Bubble */}
                     <div className="relative">
                       <div className="message-bubble">
                         {message.text && (
                           <p className="whitespace-pre-wrap text-sm">{message.text}</p>
                         )}
-                        
+
                         {message.attachments && message.attachments.length > 0 && (
                           <div className="mt-1">
                             {message.attachments.map((attachment, index) => (
@@ -305,9 +285,8 @@ const MessageList = ({ chatId }: MessageListProps) => {
                           </div>
                         )}
                       </div>
-                      
-                      {/* Message Actions (visible on hover or mobile tap) */}
-                      <div 
+
+                      <div
                         className={cn(
                           "message-actions",
                           isSender ? "-left-8" : "-right-8"
@@ -316,9 +295,8 @@ const MessageList = ({ chatId }: MessageListProps) => {
                         <MessageActions message={message} />
                       </div>
                     </div>
-                    
-                    {/* Message Timestamp and Status */}
-                    <div className="message-timestamp">
+
+                    <div className="message-timestamp flex items-center gap-1 text-xs opacity-70">
                       <span>{formatTimestamp(message.timestamp)}</span>
                       {isSender && (
                         <>
@@ -334,7 +312,7 @@ const MessageList = ({ chatId }: MessageListProps) => {
                         </>
                       )}
                       {(message.edited || message.isEdited) && (
-                        <span className="text-[10px] opacity-70">(edited)</span>
+                        <span className="text-[10px]">(edited)</span>
                       )}
                     </div>
                   </div>
@@ -344,7 +322,7 @@ const MessageList = ({ chatId }: MessageListProps) => {
           })}
         </div>
       ))}
-      
+
       <div ref={messagesEndRef} />
     </div>
   );

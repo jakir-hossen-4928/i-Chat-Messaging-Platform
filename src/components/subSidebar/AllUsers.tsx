@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { ref, onValue, push, set } from "firebase/database";
 import { database } from "@/lib/firebase.index";
-import { ref, onValue, off, push, set } from "firebase/database";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChat } from "@/contexts/ChatContext";
 import { User } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { format, differenceInHours } from "date-fns";
-import { MessageSquare, Phone, Video } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useChat } from "@/contexts/ChatContext";
 
 interface AllUsersProps {
   searchTerm: string;
@@ -26,14 +26,13 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
     if (!currentUser) return;
 
     const usersRef = ref(database, "users");
+    const unsubscribe = onValue(
+      usersRef,
+      (snapshot) => {
+        const usersList: User[] = [];
 
-    const unsubscribe = onValue(usersRef, (snapshot) => {
-      const usersList: User[] = [];
-
-      if (snapshot.exists()) {
         snapshot.forEach((childSnapshot) => {
           const userData = childSnapshot.val();
-          // Exclude the current user
           if (childSnapshot.key !== currentUser.uid && userData.displayName) {
             usersList.push({
               uid: childSnapshot.key || "",
@@ -43,21 +42,22 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
               status: userData.status || "offline",
               lastSeen: userData.lastSeen || Date.now(),
               createdAt: userData.createdAt || Date.now(),
-              updatedAt: userData.updatedAt || Date.now()
+              updatedAt: userData.updatedAt || Date.now(),
             });
           }
         });
+
+        setUsers(usersList);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching users:", error);
+        toast.error("Failed to load users");
+        setIsLoading(false);
       }
+    );
 
-      setUsers(usersList);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching users:", error);
-      toast.error("Failed to load users");
-      setIsLoading(false);
-    });
-
-    return () => off(usersRef);
+    return () => unsubscribe();
   }, [currentUser]);
 
   // Start a chat with another user
@@ -65,31 +65,32 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
     if (!currentUser) return;
 
     try {
-      // Check if chat already exists
       const chatsRef = ref(database, "chats");
       let chatExists = false;
       let existingChatId = "";
 
-      const snapshot = await new Promise<any>((resolve) => {
-        onValue(ref(database, "chats"), (snapshot) => {
-          resolve(snapshot);
-        }, { onlyOnce: true });
+      // Check if chat already exists
+      await new Promise<void>((resolve) => {
+        onValue(
+          chatsRef,
+          (snapshot) => {
+            snapshot.forEach((childSnapshot) => {
+              const chatData = childSnapshot.val();
+              if (
+                chatData.type === "direct" &&
+                chatData.users.length === 2 &&
+                chatData.users.includes(currentUser.uid) &&
+                chatData.users.includes(userId)
+              ) {
+                chatExists = true;
+                existingChatId = childSnapshot.key || "";
+              }
+            });
+            resolve();
+          },
+          { onlyOnce: true }
+        );
       });
-
-      if (snapshot.exists()) {
-        snapshot.forEach((childSnapshot: any) => {
-          const chatData = childSnapshot.val();
-          if (
-            chatData.type === "direct" &&
-            chatData.users.length === 2 &&
-            chatData.users.includes(currentUser.uid) &&
-            chatData.users.includes(userId)
-          ) {
-            chatExists = true;
-            existingChatId = childSnapshot.key;
-          }
-        });
-      }
 
       let chatId;
 
@@ -97,7 +98,7 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
         chatId = existingChatId;
       } else {
         // Create a new chat
-        const newChatRef = push(ref(database, "chats"));
+        const newChatRef = push(chatsRef);
         chatId = newChatRef.key;
 
         const chatData = {
@@ -106,27 +107,33 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
           users: [currentUser.uid, userId],
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          creator: currentUser.uid
+          creator: currentUser.uid,
         };
 
         await set(newChatRef, chatData);
         toast.success("Chat created!");
       }
 
-      // Fetch the full chat object and dispatch it to ChatContext
-      onValue(ref(database, `chats/${chatId}`), (snapshot) => {
-        if (snapshot.exists()) {
-          const chatData = snapshot.val();
-          dispatch({
-            type: "SET_CURRENT_CHAT",
-            payload: {
-              ...chatData,
-              id: chatId
+      // Fetch the chat data
+      await new Promise<void>((resolve) => {
+        onValue(
+          ref(database, `chats/${chatId}`),
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const chatData = snapshot.val();
+              dispatch({
+                type: "SET_CURRENT_CHAT",
+                payload: {
+                  ...chatData,
+                  id: chatId,
+                },
+              });
             }
-          });
-        }
-      }, { onlyOnce: true });
-
+            resolve();
+          },
+          { onlyOnce: true }
+        );
+      });
     } catch (error) {
       console.error("Error creating chat:", error);
       toast.error("Failed to start chat");
@@ -136,9 +143,10 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
   // Filter users based on search term
   const filteredUsers = useMemo(() => {
     const lowerSearch = searchTerm.toLowerCase();
-    return users.filter(user =>
-      user.displayName.toLowerCase().includes(lowerSearch) ||
-      (user.email && user.email.toLowerCase().includes(lowerSearch))
+    return users.filter(
+      (user) =>
+        user.displayName.toLowerCase().includes(lowerSearch) ||
+        (user.email && user.email.toLowerCase().includes(lowerSearch))
     );
   }, [users, searchTerm]);
 
@@ -163,7 +171,7 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
           <h3 className="text-sm md:text-base font-semibold truncate">{user.displayName}</h3>
           <p className="text-xs md:text-sm text-muted-foreground truncate">{user.email}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {isOnline ? "Online now" : `Last seen ${format(new Date(user.lastSeen), "dd MMM HH:mm")}`}
+            {isOnline ? "Online now" : `Last seen ${format(new Date(user.lastSeen), "dd MMM h:mm a")}`}
           </p>
         </div>
 
@@ -175,22 +183,6 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
             onClick={() => handleStartChat(user.uid)}
           >
             <MessageSquare className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled
-          >
-            <Phone className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled
-          >
-            <Video className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -209,8 +201,6 @@ const AllUsers: React.FC<AllUsersProps> = ({ searchTerm }) => {
                 <Skeleton className="h-3 w-1/2" />
               </div>
               <div className="flex space-x-2">
-                <Skeleton className="h-8 w-8 rounded" />
-                <Skeleton className="h-8 w-8 rounded" />
                 <Skeleton className="h-8 w-8 rounded" />
               </div>
             </div>

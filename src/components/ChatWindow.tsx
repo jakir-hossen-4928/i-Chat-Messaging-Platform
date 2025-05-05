@@ -6,28 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { database } from "@/lib/firebase.index";
-import { ref, onValue, off, push, set, update, get } from "firebase/database";
+import { ref, onValue, off, set, update, get } from "firebase/database";
 import {
   MessageSquare,
-  Phone,
-  Video,
   Menu,
   X,
   Image as ImageIcon,
   Settings
 } from "lucide-react";
-import MessageList from "./MessageList";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import EmojiPicker from "./EmojiPicker";
 import UserProfileView from "./user/UserProfileView";
-import ImageUploader from "./ImageUploader";
-import GroupOperationsDialog from "./GroupOperationsDialog";
 import ChatThemeSelector from "./ChatThemeSelector";
+import GroupOperationsDialog from "./GroupOperationsDialog";
+import MessageList from "./MessageList";
 
 interface ChatWindowProps {
   onToggleSidebar?: () => void;
@@ -39,7 +33,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [chatPartner, setChatPartner] = useState<{
     uid: string;
     displayName: string;
@@ -50,6 +43,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
     lastSeen?: number;
   } | null>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // For draggable message button
   const [msgButtonPosition, setMsgButtonPosition] = useState({ x: 20, y: -80 });
@@ -60,21 +54,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
   const [isProfileViewOpen, setIsProfileViewOpen] = useState(false);
 
   // For image uploads
-  const [showImageUploader, setShowImageUploader] = useState(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
 
   // For group operations dialog
   const [isGroupOperationsOpen, setIsGroupOperationsOpen] = useState(false);
-
-  // GSAP animations
-  const containerRef = useRef(null);
-  useGSAP(() => {
-    gsap.fromTo(
-      containerRef.current,
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.5 }
-    );
-  }, []);
 
   // Get chat partner details for direct chats
   useEffect(() => {
@@ -113,16 +96,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
   const handleTyping = () => {
     if (!currentUser || !state.currentChat) return;
 
-    // Update typing status in Firebase
     const typingRef = ref(database, `typing/${state.currentChat.id}/${currentUser.uid}`);
     set(typingRef, true);
 
-    // Clear any existing timeout
     if (typingTimeout) {
       clearTimeout(typingTimeout);
     }
 
-    // Set new timeout to clear typing status
     const timeout = setTimeout(() => {
       if (state.currentChat) {
         const typingRef = ref(database, `typing/${state.currentChat.id}/${currentUser.uid}`);
@@ -141,7 +121,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
     const unsubscribe = onValue(typingRef, (snapshot) => {
       const typingData = snapshot.val() || {};
 
-      // Check if anyone other than the current user is typing
       const someoneIsTyping = Object.entries(typingData).some(
         ([uid, isTyping]) => uid !== currentUser.uid && isTyping
       );
@@ -160,10 +139,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
     setMessage((prev) => prev + emoji);
   };
 
-  // Handle image upload
-  const handleImageUpload = (imageUrl: string) => {
-    setUploadedImageUrl(imageUrl);
-    setShowImageUploader(false);
+  // Handle image selection and upload
+  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const imageUrl = await new Promise<string>((resolve) => {
+        setTimeout(() => {
+          resolve(URL.createObjectURL(file));
+        }, 1000);
+      });
+
+      setUploadedImageUrl(imageUrl);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   // Handle sending messages
@@ -171,15 +167,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
     if (!currentUser || !state.currentChat) return;
 
     try {
-      // Send message with optional image URL
       if (message.trim() || uploadedImageUrl) {
         await contextSendMessage(message.trim(), uploadedImageUrl || undefined);
-
-        // Clear message and image
         setMessage("");
         setUploadedImageUrl(null);
 
-        // Clear typing status
         if (state.currentChat) {
           const typingRef = ref(database, `typing/${state.currentChat.id}/${currentUser.uid}`);
           await set(typingRef, false);
@@ -199,15 +191,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
     }
   };
 
-  // Toggle image uploader
-  const toggleImageUploader = () => {
-    setShowImageUploader(!showImageUploader);
-  };
-
   // Cancel image upload
   const cancelImageUpload = () => {
     setUploadedImageUrl(null);
-    setShowImageUploader(false);
   };
 
   // Handle dragging for message button
@@ -272,16 +258,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
     if (!currentUser || !state.currentChat) return;
 
     try {
-      // Remove user from group
       const updatedUsers = state.currentChat.users.filter(uid => uid !== currentUser.uid);
-
-      // Update chat data
       await update(ref(database, `chats/${state.currentChat.id}`), {
         users: updatedUsers,
         updatedAt: Date.now()
       });
-
-      // Update state
       dispatch({ type: "SET_CURRENT_CHAT", payload: null });
       toast.success("You have left the group");
     } catch (error) {
@@ -303,7 +284,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
   }
 
   return (
-    <div className="flex flex-col h-full" ref={containerRef}>
+    <div className="flex flex-col h-full">
       {/* Chat Header */}
       <div className="flex items-center p-3 border-b bg-background/95 backdrop-blur-sm shadow-sm">
         {isMobile && (
@@ -337,19 +318,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
           {isTyping && <p className="text-sm text-muted-foreground">typing...</p>}
         </div>
 
-        {/* Add Chat Theme Selector */}
         <ChatThemeSelector />
 
-        {state.currentChat.type === "direct" && (
-          <div className="flex space-x-1">
-            <Button variant="ghost" size="icon" disabled className="rounded-full">
-              <Phone className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" disabled className="rounded-full">
-              <Video className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
         {state.currentChat.type === "group" && (
           <Button variant="ghost" size="icon" onClick={() => setIsGroupOperationsOpen(true)} className="rounded-full">
             <Settings className="h-5 w-5" />
@@ -366,7 +336,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
 
       {/* Message Input */}
       <div className="p-2 border-t bg-background/95 backdrop-blur-sm">
-        {/* Display image preview if an image has been uploaded */}
         {uploadedImageUrl && (
           <div className="mb-2 p-2 border rounded-md bg-background relative">
             <div className="flex items-center gap-2">
@@ -393,24 +362,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
           </div>
         )}
 
-        {/* Show image uploader if active */}
-        {showImageUploader && !uploadedImageUrl && (
-          <div className="mb-2 p-2 border rounded-md bg-background">
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="text-sm font-medium">Attach Image</h4>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 rounded-full"
-                onClick={() => setShowImageUploader(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <ImageUploader onImageUpload={handleImageUpload} />
-          </div>
-        )}
-
         <div className="flex items-center space-x-2">
           <div className="flex items-center flex-1 rounded-full border bg-background pr-1">
             <Input
@@ -424,18 +375,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
               className="flex-1 rounded-full border-0"
             />
             <div className="flex">
-              {!showImageUploader && !uploadedImageUrl && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full"
-                  onClick={toggleImageUploader}
-                >
-                  <ImageIcon className="h-5 w-5" />
-                  <span className="sr-only">Attach image</span>
-                </Button>
-              )}
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImageIcon className="h-5 w-5" />
+                <span className="sr-only">Attach image</span>
+              </Button>
               <EmojiPicker onSelect={handleEmojiSelect} />
             </div>
           </div>
@@ -454,7 +410,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
         </div>
       </div>
 
-      {/* Draggable message button for mobile */}
       {isMobile && (
         <div
           className={cn(
@@ -479,14 +434,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onToggleSidebar }) => {
         </div>
       )}
 
-      {/* User Profile View */}
       <UserProfileView
         user={chatPartner}
         isOpen={isProfileViewOpen}
         onClose={() => setIsProfileViewOpen(false)}
       />
 
-      {/* Group Operations Dialog */}
       <GroupOperationsDialog
         open={isGroupOperationsOpen}
         onOpenChange={setIsGroupOperationsOpen}

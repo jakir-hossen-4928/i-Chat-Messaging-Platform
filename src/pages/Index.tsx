@@ -1,54 +1,70 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { MessageCircle, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import ChatWindow from "@/components/ChatWindow";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+
 
 const AppLayout = () => {
   const { currentUser, loading } = useAuth();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  console.log('AppLayout rendered:', { currentUser, loading, isMobile, sidebarOpen, pathname: location.pathname });
+  console.log("AppLayout rendered:", {
+    currentUser: currentUser ? "exists" : "null",
+    loading,
+    isMobile,
+    sidebarOpen,
+    pathname: location.pathname,
+  });
 
   // GSAP animations
   useGSAP(() => {
-    gsap.fromTo(
-      containerRef.current,
-      { opacity: 0 },
-      { opacity: 1, duration: 0.5, ease: "power2.out" }
-    );
+    if (containerRef.current) {
+      gsap.fromTo(
+        containerRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.5, ease: "power2.out" }
+      );
+    } else {
+      console.warn("GSAP target not found: containerRef");
+    }
   }, []);
 
+  // Update favicon
   useEffect(() => {
-    // Update favicon
     const linkElement = document.querySelector('link[rel="icon"]');
     if (linkElement instanceof HTMLLinkElement) {
-      linkElement.href = '/logo.svg';
+      linkElement.href = "/logo.svg";
     } else {
-      const newLink = document.createElement('link');
-      newLink.rel = 'icon';
-      newLink.href = '/logo.svg';
+      const newLink = document.createElement("link");
+      newLink.rel = "icon";
+      newLink.href = "/logo.svg";
       document.head.appendChild(newLink);
     }
   }, []);
 
+  // Close sidebar on desktop
   useEffect(() => {
     if (!isMobile) setSidebarOpen(false);
   }, [isMobile]);
-  
+
+  // Debug CallModal mounting
+  useEffect(() => {
+    console.log("CallModal mounted in AppLayout");
+  }, []);
+
   // Toggle sidebar function (for mobile menu button)
   const toggleSidebar = () => {
-    setSidebarOpen(prev => !prev);
+    setSidebarOpen((prev) => !prev);
   };
 
   if (loading) {
@@ -60,24 +76,27 @@ const AppLayout = () => {
   }
 
   if (!currentUser) {
-    console.log('AppLayout: No currentUser, navigating to /login');
+    console.log("AppLayout: No currentUser, navigating to /login");
     return <Navigate to="/login" replace />;
   }
 
   return (
     <ChatProvider>
-      <div className="flex h-screen overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900 dark:to-purple-900" ref={containerRef}>
+      <div
+        className="flex h-screen overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900 dark:to-purple-900"
+        ref={containerRef}
+      >
         {/* Mobile Hamburger Menu Button */}
         {isMobile && (
-          <button 
+          <button
             onClick={toggleSidebar}
-            className="fixed top-4 left-4 bg-indigo-600 text-white p-2 rounded-full shadow-md z-50 md:hidden"
+            className="fixed top-4 left-4 bg-indigo-600 text-white p-2 rounded-full shadow-md z-[60] md:hidden"
             aria-label="Open sidebar"
           >
             <Menu size={20} />
           </button>
         )}
-        
+
         {/* Desktop Sidebar */}
         {!isMobile && (
           <aside className="hidden lg:block w-[280px] xl:w-[350px] border-r border-indigo-100 dark:border-indigo-800/50">
@@ -107,6 +126,7 @@ const AppLayout = () => {
             <div className="absolute bottom-20 right-20 w-60 h-60 bg-purple-300 dark:bg-purple-700 rounded-full opacity-20 animate-float-delayed"></div>
           </div>
         </main>
+
       </div>
     </ChatProvider>
   );
