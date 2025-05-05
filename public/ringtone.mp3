@@ -1,0 +1,52 @@
+// This script creates a ringtone blob and makes it available
+(function createRingtone() {
+  // A short, basic ringtone as a base64 string - format is MP3
+  const ringtoneBase64 = "//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA9AAABNAABD4AABAQEBDQ0NDRoaGhomJiYmMzMzM0BAQEBNTk5OW1tbW2hoaGh1dXV1goKCgpCQkJCdnZ2dqqqqqqmpqam2tra2w8PDw9DQ0NDd3d3d6urq6vf39/cAAABQTEFNRTMuMTAwBLkAAAAAAAAAABUgJAhDTQABzAAAQ+A0LZoLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//vAxAAAB3AHZ3DMAACLkS1vVngA6CEmMohQJAMDQkGqBAQA0NgGAASDu+XZtb///2PZCCSHNY9EYhIdJHGHe4CAIAQhg43Z+///IQhGjCZjkZQQiJlw4jERMuGHcfJ//9+4UVERCMsuGWGf//xSYiLJyy4UX///w8XEIiIYePiwef/+CCCxQXjGKGGGKC8dxQMHwpFG/////wYEDh5mQeGHjCjw0QwQaNJJI+o8Ok0pro6o7vef//////+ZrNJ9amnUVKmnn/f+mtNKkxBTUUzLjk4LjJVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/+xDE1QPOfAWdlPeAAt5EtLKe9ACVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==";
+
+  try {
+    // Create audio element for ringtone
+    const ringtoneAudio = new Audio();
+    
+    // Convert base64 to Blob
+    const byteCharacters = atob(ringtoneBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'audio/mp3' });
+    
+    // Create a URL for the blob
+    const ringtoneUrl = URL.createObjectURL(blob);
+    
+    // Set the ringtone URL to the audio element
+    ringtoneAudio.src = ringtoneUrl;
+    ringtoneAudio.loop = true;
+    
+    // Preload the audio
+    ringtoneAudio.preload = "auto";
+    
+    // Test loading the audio
+    ringtoneAudio.load();
+    
+    // Make it accessible globally
+    window.RINGTONE_URL = ringtoneUrl;
+    window.RINGTONE_AUDIO = ringtoneAudio;
+    
+    console.log("Ringtone created and ready");
+    
+    // Verify ringtone can be played (will be triggered on user interaction)
+    document.addEventListener('click', () => {
+      ringtoneAudio.play()
+        .then(() => {
+          console.log("Ringtone playback test successful");
+          ringtoneAudio.pause();
+          ringtoneAudio.currentTime = 0;
+        })
+        .catch(e => console.error("Ringtone playback test failed:", e));
+    }, { once: true });
+    
+  } catch (e) {
+    console.error("Failed to create ringtone:", e);
+  }
+})();

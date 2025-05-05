@@ -1,0 +1,91 @@
+
+/* Base message styling - shared across all themes */
+.message-container {
+  @apply flex w-full px-1;
+}
+
+.message-avatar {
+  @apply flex-shrink-0 mr-2;
+}
+
+.message-content-wrapper {
+  @apply max-w-[85%] flex flex-col;
+  /* Removed @apply group here as it can't be used with @apply */
+}
+
+/* Add the group class directly in the HTML markup instead */
+/* The group hover styles are kept but without using @apply for 'group' */
+.message-actions {
+  @apply absolute top-0 opacity-0;
+  /* group-hover:opacity-100 needs to be handled via the markup */
+}
+
+.message-timestamp {
+  @apply flex items-center gap-1 mt-1 text-xs text-muted-foreground;
+}
+
+/* Default Theme */
+.theme-default .message-bubble {
+  @apply rounded-2xl px-4 py-2.5 shadow-sm;
+}
+
+.theme-default .sender-message .message-bubble {
+  @apply bg-primary text-primary-foreground rounded-tr-none;
+}
+
+.theme-default .receiver-message .message-bubble {
+  @apply bg-card dark:bg-card/80 text-card-foreground rounded-tl-none;
+}
+
+/* Bubble Theme */
+.theme-bubble .message-bubble {
+  @apply rounded-full px-4 py-2.5 shadow-md;
+}
+
+.theme-bubble .sender-message .message-bubble {
+  @apply bg-gradient-to-br from-blue-500 to-indigo-600 text-white;
+}
+
+.theme-bubble .receiver-message .message-bubble {
+  @apply bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 text-foreground;
+}
+
+/* Elegant Theme */
+.theme-elegant .message-bubble {
+  @apply rounded-lg px-4 py-3 shadow-sm border;
+}
+
+.theme-elegant .sender-message .message-bubble {
+  @apply bg-primary/90 text-primary-foreground border-primary/30;
+}
+
+.theme-elegant .receiver-message .message-bubble {
+  @apply bg-background text-foreground border-muted/40;
+}
+
+/* Minimal Theme */
+.theme-minimal .message-bubble {
+  @apply rounded-md px-3 py-2 shadow-none border-l-2;
+}
+
+.theme-minimal .sender-message .message-bubble {
+  @apply bg-primary/10 text-foreground border-primary;
+}
+
+.theme-minimal .receiver-message .message-bubble {
+  @apply bg-transparent text-foreground border-muted;
+}
+
+/* Add CSS to handle group hover functionality */
+.group:hover .message-actions,
+.group:focus-within .message-actions,
+.message-content-wrapper:hover .message-actions {
+  @apply opacity-100;
+}
+
+/* Add additional media query for better mobile support */
+@media (min-width: 768px) {
+  .group:hover .message-actions {
+    @apply opacity-100;
+  }
+}

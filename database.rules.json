@@ -1,0 +1,77 @@
+
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['uid', 'email', 'displayName', 'status', 'lastSeen', 'createdAt', 'updatedAt'])",
+        "uid": {
+          ".validate": "newData.val() === $uid"
+        },
+        "email": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "displayName": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "status": {
+          ".validate": "newData.isString() && (newData.val() === 'online' || newData.val() === 'offline')"
+        },
+        "lastSeen": {
+          ".validate": "newData.isNumber()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    "chats": {
+      ".read": "auth !== null",
+      ".write": "auth !== null",
+      "$chatId": {
+        ".validate": "newData.hasChildren(['users', 'type', 'createdAt', 'updatedAt', 'creator'])"
+      }
+    },
+    "messages": {
+      "$chatId": {
+        ".read": "auth !== null",
+        ".write": "auth !== null",
+        ".indexOn": ["timestamp"],
+        "$messageId": {
+          ".validate": "newData.hasChildren(['senderId', 'text', 'timestamp'])",
+          "senderId": {
+            ".validate": "newData.val() === auth.uid"
+          },
+          "timestamp": {
+            ".validate": "newData.val() <= now"
+          }
+        }
+      }
+    },
+    "typing": {
+      "$chatId": {
+        ".read": "auth !== null",
+        "$userId": {
+          ".write": "auth !== null && auth.uid === $userId"
+        }
+      }
+    },
+    "presence": {
+      "$userId": {
+        ".read": "auth !== null",
+        ".write": "auth !== null && auth.uid === $userId"
+      }
+    },
+    "calls": {
+      ".read": "auth !== null",
+      ".write": "auth !== null",
+      "$callId": {
+        ".validate": "newData.hasChildren(['callerId', 'receiverId', 'status'])"
+      }
+    }
+  }
+}
